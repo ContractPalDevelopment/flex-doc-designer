@@ -1,0 +1,38 @@
+<mx:TitleWindow xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" width="180" height="200" 
+	title="Select Info to Display"  showCloseButton="true" close="customPopUpManager.removePopUp(this)" creationComplete="init()">
+	<mx:Script>
+		<![CDATA[
+			import components.customPopUpManager;
+            import helpers.Layer;
+            import mx.core.FlexGlobals;
+			
+			private var mainApp:FlexDocDesigner = FlexDocDesigner(FlexGlobals.topLevelApplication);
+			
+			private function init():void{
+				grShow.selectedValue = mainApp.fieldInfoTip.infoType;
+			}
+			
+			public function show():void
+			{
+				if(grShow.selectedValue)
+				{
+					mainApp.fieldInfoTip.infoType = grShow.selectedValue;
+					mainApp.fieldInfoTip.show = true;
+					Layer.drawLayer();
+					customPopUpManager.removePopUp(this);
+				}
+			}
+		]]>
+	</mx:Script>		
+	<mx:Form id="myForm" paddingLeft="20">
+		<mx:RadioButtonGroup id="grShow" />
+		<mx:RadioButton groupName="grShow" value="ID" label="ID" />
+		<mx:RadioButton groupName="grShow" value="Name" label="Name" />
+		<mx:RadioButton groupName="grShow" value="Value" label="Value" />
+		<mx:RadioButton groupName="grShow" value="Role" label="Role" />
+    </mx:Form>
+	<mx:HBox right="15" bottom="15">
+		<mx:Button id="fShow" label="Show" click="show();" />
+		<mx:Button id="fCancel" label="Cancel" click="customPopUpManager.removePopUp(this)" />
+	</mx:HBox>
+</mx:TitleWindow>

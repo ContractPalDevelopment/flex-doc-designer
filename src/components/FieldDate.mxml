@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="utf-8"?>
+<components:Field xmlns:fx="http://ns.adobe.com/mxml/2009"
+		 xmlns:mx="library://ns.adobe.com/flex/mx" xmlns:components="components.*"
+		 width="100" height="19" creationComplete="init()" click="select()"
+		 >
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+	</fx:Declarations>
+	<fx:Script>
+		<![CDATA[
+        import fieldSettingsDialogs.fieldDateSettings;
+        import helpers.Layer;
+        import helpers.FieldsManager;
+        use namespace mx_internal;
+
+        [Embed(source="../assets/fields/date.png")]
+        [Bindable]
+        public var source:Class;
+
+        override public function set inSelection(value:Boolean):void {
+            _inSelection = value;
+            if (_inSelection) {
+                select();
+            }
+            else {
+                unselect();
+            }
+        }
+
+        override public function set showWarning(value:Boolean):void {
+            _showWarning = value;
+            warning.visible = _showWarning;
+        }
+
+        private function init():void {
+            this.width = fieldData["width"];
+            img.graphics.beginFill(0x79C6FE);
+            img.graphics.drawRect(0, 0, this.width, this.height);
+            img.graphics.endFill();
+            logo.width = this.width < 20 ? this.width : 20;
+            if(isNative) { logo.filters = [getColorFilter()];}
+            bg.width = this.width;
+            bg.height = this.height;
+
+            drawBorder();
+            this.inSelection = _inSelection;
+            if (!this.inSelection || FieldsManager.getSelectedFields().length < 2) {
+                addContextMenu();
+            }
+
+            this.name = fieldData["id"];
+            fieldId = fieldData["id"];
+            fText.width = this.width - 23;
+            switch (fieldData["subType"]) {
+                case "allSigned":
+                    fText.text = "Date Fully Signed";
+                    break;
+                case "sigSigned":
+                    fText.text = "Date Signed (" + fieldData["role"] + ")";
+                    break;
+                case "sent":
+                    fText.text = "Date Sent";
+                    break;
+                case "custom":
+                    fText.text = fieldData["name"] + " (" + fieldData["role"] + ")";
+                    break;
+            }
+
+            if (mainApp.fieldInfoTip.show) {
+                var str:String = "";
+                switch (mainApp.fieldInfoTip.infoType.toString()) {
+                    case "ID":
+                        str = fieldData["id"];
+                        break;
+                    case "Name":
+                        if (fieldData["name"]) {
+                            str = fieldData["name"];
+                        }
+                        break;
+                    case "Value":
+                        str = "";
+                        break;
+                    case "Role":
+                        str = fieldData["role"];
+                        break;
+                }
+                tipText.text = str;
+                tipText.validateNow();
+                var textWidth:int = tipText.textWidth;
+                tipBox.width = textWidth + 8;
+                tipBox.x = this.width;
+            }
+        }
+
+        override public function addContextMenu():void {
+            const cm:ContextMenu = new ContextMenu();
+            cm.hideBuiltInItems();
+
+            const del:ContextMenuItem = new ContextMenuItem("Delete Date Field");
+            if(isNative) { del.enabled = false; }
+            del.addEventListener(ContextMenuEvent.MENU_ITEM_SELECT, function(e:ContextMenuEvent):void {
+                Layer.deleteField(fieldId);
+                Layer.drawLayer();
+            });
+            const edit:ContextMenuItem = new ContextMenuItem("Edit Date Field");
+            edit.addEventListener(ContextMenuEvent.MENU_ITEM_SELECT, function(e:ContextMenuEvent):void {
+                launchSettingsDialog()
+            });
+            const copy:ContextMenuItem = new ContextMenuItem("Copy Date Field");
+            copy.addEventListener(ContextMenuEvent.MENU_ITEM_SELECT, function(e:ContextMenuEvent):void {
+                FieldsManager.ctxCopyElement(e);
+            });
+            copy.separatorBefore = true;
+            cm.customItems = [edit,del,copy];
+
+            cm.addEventListener(ContextMenuEvent.MENU_SELECT, contextMenuSelectHandler);
+            this.contextMenu = cm;
+        }
+
+        override protected function launchSettingsDialog():void
+        {
+            if(!inSelection){ FieldsManager.unSelectAll(Field(this));}
+            var editD:fieldDateSettings = fieldDateSettings(customPopUpManager.createPopUp(mainApp.docContainer, fieldDateSettings, true));
+            editD.fieldData = fieldData;
+            customPopUpManager.centerPopUp(editD);
+            adjustDialogPosition(editD);
+        }
+
+        private function drawBorder():void {
+            var w:int = this.width;
+            var h:int = this.height;
+            frame.graphics.lineStyle(1, 0xD4D0C8, 1.0, false, "normal", CapsStyle.SQUARE, JointStyle.MITER);
+            frame.graphics.moveTo(w, 0);
+            frame.graphics.lineTo(w, h);
+            frame.graphics.lineTo(0, h);
+            frame.graphics.lineStyle(1, 0x808080, 1.0, false, "normal", CapsStyle.SQUARE, JointStyle.MITER);
+            frame.graphics.lineTo(0, 0);
+            frame.graphics.lineTo(w, 0);
+            frame.graphics.lineStyle(1, 0x373737, 1.0, false, "normal", CapsStyle.SQUARE, JointStyle.MITER);
+            frame.graphics.moveTo(w, 1);
+            frame.graphics.lineTo(1, 1);
+            frame.graphics.lineTo(1, h);
+        }
+
+        override protected function select():void {
+            redFrame.graphics.clear();
+            var w:int = this.width;
+            var h:int = this.height;
+            redFrame.graphics.lineStyle(1, 0xff0000, 1.0, false, "normal", CapsStyle.SQUARE, JointStyle.MITER);
+            redFrame.graphics.moveTo(0, 0);
+            redFrame.graphics.lineTo(w, 0);
+            redFrame.graphics.lineTo(w, h);
+            redFrame.graphics.lineTo(0, h);
+            redFrame.graphics.lineTo(0, 0);
+
+            if(!isNative){
+                cl.visible = true;
+                cr.visible = true;
+            }
+        }
+
+        override protected function unselect():void {
+            redFrame.graphics.clear();
+            cl.visible = false;
+            cr.visible = false;
+        }
+        ]]>
+	</fx:Script>
+	<mx:Box id="tipBox" borderColor="#cccccc" borderStyle="solid" borderVisible="true" backgroundColor="#fdfdcc" x="0" y="2" width="0" height="20" >
+		<mx:Text id="tipText" color="#333333" selectable="false" x="2" height="20" />
+	</mx:Box>
+	<mx:Image id="img" />
+	<mx:Image id="logo" width="20" height="18" scaleContent="false" source="{source}" />
+	<mx:Text id="fText" selectable="false" height="19" x="23" y="1" />
+	<mx:Image id="frame" />
+	<mx:Image id="redFrame" />
+	<mx:Image id="bg" source="{bg_source}" scaleContent="true" maintainAspectRatio="false" buttonMode="true" alpha="0"
+			  mouseDown="fieldStartDrag(event);" mouseUp="this.stopDrag();"
+              doubleClick="launchSettingsDialog()" doubleClickEnabled="true" />
+	<components:ResizeBox id="cl" name="cl" top="7" left="-3" endResize="resizeField(event)" />
+	<components:ResizeBox id="cr" name="cr" top="7" right="-3" endResize="resizeField(event)" />
+	<mx:Image id="warning" name="warning" source="{img_warning}" x="-5" y="-5" width="15" height="15" scaleContent="true" visible="false"  />
+</components:Field>

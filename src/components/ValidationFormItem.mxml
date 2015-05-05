@@ -1,0 +1,187 @@
+<?xml version="1.0"?>
+<mx:FormItem xmlns:fx="http://ns.adobe.com/mxml/2009"
+    xmlns:mx="library://ns.adobe.com/flex/mx"
+    direction="horizontal" horizontalGap="2" creationComplete="init()">
+    <fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+	</fx:Declarations>
+	<fx:Script>
+		<![CDATA[
+        import helpers.Messaging;
+        import mx.containers.Box;
+        import mx.controls.ComboBox;
+        import mx.controls.Image;
+        import mx.controls.TextArea;
+        import mx.controls.TextInput;
+        import mx.controls.CheckBox;
+
+        [Embed(source="../assets/error.gif")] public var errorClass:Class;
+        private var _label:String = "";
+        public var fiLabel:String;
+        private var _isRequired:Boolean = false;
+        private var _doValidation:Boolean = false;
+        public var regExp:RegExp;
+        public var validateInt:Boolean = false;
+        public var maxIntValue:int = 0;
+        public var maxStrLength:int = -1;
+
+        private var errorBox:Box;
+        private var errorImg:Image;
+
+        private function init():void
+        {
+            _label = fiLabel;
+            adjustLabel();
+        }
+
+        public function set isRequired(value:Boolean):void{
+            _isRequired = value;
+            adjustLabel();
+
+        }
+        public function get isRequired():Boolean{
+            return _isRequired;
+        }
+
+        public function set doValidation(value:Boolean):void{
+            _doValidation = value;
+            if(!value){ hideError(); }
+        }
+        public function get doValidation():Boolean{
+            return _doValidation;
+        }
+
+        private function adjustLabel():void
+        {
+            if(_isRequired) this.label = _label + " *";
+            else this.label = _label;
+        }
+
+        public function Validate():Boolean
+        {
+            hideError();
+            if(!doValidation) return true;
+            switch(getChildElementClass())
+            {
+                case "TextInput":
+                    var tiValue:String = TextInput(this.getChildAt(0)).text;
+                    if(isRequired)
+                    {
+                        if(!tiValue || tiValue == "")
+                        {
+                            showError(this._label + " required");
+                            return false;
+                        }
+                    }
+                    if(regExp != null)
+                    {
+                        if(!regExp.test(tiValue))
+                        {
+                            showError(this._label + " shall start with a letter or _, have no space, and contain alphanumeric characters only");
+                            return false;
+                        }
+                    }
+                    if(validateInt && tiValue != "")
+                    {
+                        if(int(tiValue).toString() != tiValue)
+                        {
+                            showError(this._label + " has to be integer");
+                            return false;
+                        }
+                    }
+                    if(maxIntValue != 0 && tiValue != "")
+                    {
+                        if(maxIntValue < int(tiValue))
+                        {
+                            showError("Maximum "+ this._label + " allowed: " + maxIntValue.toString());
+                            return false;
+                        }
+                    }
+                    if(maxStrLength != -1)
+                    {
+                        if(maxStrLength < tiValue.length)
+                        {
+                            showError(this._label + " length exceeds " + maxStrLength.toString() + " characters");
+                            return false;
+                        }
+                    }
+                    break;
+                case "TextArea":
+                    var taValue:String = TextArea(this.getChildAt(0)).text;
+                    if(isRequired)
+                    {
+                        if(!taValue || taValue == "")
+                        {
+                            showError(this._label + " required");
+                            return false;
+                        }
+                    }
+                    if(regExp != null)
+                    {
+                        if(!regExp.test(taValue))
+                        {
+                            showError(this._label + " shall start with a letter or _, have no space, and contain alphanumeric characters only");
+                            return false;
+                        }
+                    }
+                    if(maxStrLength != -1)
+                    {
+                        if(maxStrLength < taValue.length)
+                        {
+                            showError(this._label + " length exceeds " + maxStrLength.toString() + " characters");
+                            return false;
+                        }
+                    }
+                    break;
+                case "ComboBox":
+                    if(isRequired)
+                    {
+                        if(ComboBox(this.getChildAt(0)).selectedIndex == -1 ||
+                           ComboBox(this.getChildAt(0)).selectedItem.data == "")
+                        {
+                            showError(this._label + " required");
+                            return false;
+                        }
+                    }
+                    break;
+
+            }
+            return true;
+        }
+
+        public function showError(errorMsg:String):void
+        {
+            errorBox = new Box();
+            errorBox.height = 19;
+            errorBox.width = 16;
+            errorBox.setStyle("verticalAlign", "bottom");
+
+            errorImg = new Image();
+            errorImg.source = errorClass;
+            errorImg.toolTip = errorMsg;
+
+            errorBox.addChild(errorImg);
+            this.addChild(errorBox);
+        }
+
+        public function hideError():void
+        {
+            if(errorBox){
+                this.removeChild(errorBox);
+                errorBox = null;
+            }
+        }
+
+        private function getChildElementClass():String{
+            var childElement:DisplayObject = this.getChildren()[0];
+            if(childElement is TextInput) return "TextInput";
+            if(childElement is TextArea) return "TextArea";
+            if(childElement is CheckBox) return "CheckBox";
+            if(childElement is ComboBox) return "ComboBox";
+
+            Messaging.log("ValidationFormItem: applying validation to unhandled input field class.");
+            return "";
+        }
+        ]]>
+	</fx:Script>
+</mx:FormItem>

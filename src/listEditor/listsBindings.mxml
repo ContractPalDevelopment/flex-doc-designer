@@ -1,0 +1,82 @@
+<mx:TitleWindow xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" width="490" height="240"
+	    title="Lists Bindings"  showCloseButton="true" close="customPopUpManager.removePopUp(this)" creationComplete="init()">
+	<mx:Script>
+		<![CDATA[
+        import components.customPopUpManager;
+        import mx.collections.ArrayCollection;
+        import mx.core.FlexGlobals;
+
+        private var mainApp:FlexDocDesigner = FlexDocDesigner(FlexGlobals.topLevelApplication);
+
+        private function init():void
+        {
+            fBindings.dataProvider = mainApp.selectBindingAC;
+            fBindings.selectedIndex = 0;
+
+            fBindingsChange();
+        }
+
+        public function fBindingsChange():void
+        {
+            if(fBindings.selectedIndex == -1)
+            {
+                fEditList.enabled = false;
+                fDeleteList.enabled = false;
+                return;
+            }
+            switch(fBindings.selectedItem.Type)
+            {
+                case "doc":
+                    fEditList.enabled = true;
+                    fDeleteList.enabled = true;
+                    break;
+                default:
+                    fEditList.enabled = false;
+                    fDeleteList.enabled = false;
+                    break;
+            }
+        }
+
+        private function fAddListClick():void
+        {
+            var addD:listsBindingEditor = listsBindingEditor(customPopUpManager.createPopUp(mainApp.docContainer, listsBindingEditor, true));
+            addD.bindingsDialog = this;
+            customPopUpManager.centerPopUp(addD);
+        }
+
+        private function fEditListClick():void
+        {
+            var editD:listsBindingEditor = listsBindingEditor(customPopUpManager.createPopUp(mainApp.docContainer, listsBindingEditor, true));
+            editD.bindingsDialog = this;
+            editD.binding = fBindings.selectedItem.Binding;
+            editD.listName = fBindings.selectedItem.Label;
+            customPopUpManager.centerPopUp(editD);
+        }
+
+        private function fDeleteClick():void
+        {
+            var binding:String = fBindings.selectedItem.Binding;
+            ArrayCollection(fBindings.dataProvider).removeItemAt(fBindings.selectedIndex);
+            mainApp.docBindingObj["binding"] = null;
+            fBindings.selectedIndex = ArrayCollection(fBindings.dataProvider).length - 1;
+            fBindingsChange();
+        }
+
+        ]]>
+	</mx:Script>
+
+	<mx:VBox top="10" left="15" right="15">
+        <mx:HBox>
+            <mx:Button id="fAddList" label="Add List" width="100" click="fAddListClick()" />
+            <mx:Button id="fEditList" label="Edit List" enabled="false" width="100" click="fEditListClick()" />
+            <mx:Button id="fDeleteList" label="Delete List" enabled="false" width="100" click="fDeleteClick()" />
+        </mx:HBox>
+        <mx:DataGrid id="fBindings" width="100%" height="150" change="fBindingsChange()">
+            <mx:columns>
+                <mx:DataGridColumn dataField="Binding" />
+                <mx:DataGridColumn dataField="Label" />
+                <mx:DataGridColumn dataField="Type" />
+            </mx:columns>
+        </mx:DataGrid>
+	</mx:VBox>
+</mx:TitleWindow>

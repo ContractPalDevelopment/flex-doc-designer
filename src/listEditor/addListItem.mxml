@@ -1,0 +1,84 @@
+<mx:TitleWindow xmlns:mx="http://www.adobe.com/2006/mxml" xmlns:custom="components.*"
+                layout="absolute" width="290" height="150"
+	    title="Add Item"  showCloseButton="true"
+        close="customPopUpManager.removePopUp(this)" creationComplete="init()">
+	<mx:Script>
+		<![CDATA[
+        import components.customPopUpManager;
+
+        import fieldSettingsDialogs.Validator;
+
+        import mx.collections.ArrayCollection;
+
+        import mx.core.FlexGlobals;
+
+        private var mainApp:FlexDocDesigner = FlexDocDesigner(FlexGlobals.topLevelApplication);
+        public var listDialog:listsBindingEditor;
+
+        private function init():void
+        {
+            fCreate.visible = false;
+            fCreate.includeInLayout = false;
+            fUpdate.visible = false;
+            fUpdate.includeInLayout = false;
+            if(fLabel.text == "")
+            {
+                fCreate.visible = true;
+                fCreate.includeInLayout = true;
+            }
+            else
+            {
+                fUpdate.visible = true;
+                fUpdate.includeInLayout = true;
+                this.title = "Edit Item";
+            }
+        }
+
+        private function fCreateClick():void
+        {
+            if(!Validate()) return;
+            var AC:ArrayCollection = ArrayCollection(listDialog.fList.dataProvider);
+            for(var i:int = 0; i<AC.length; i++)
+            {
+                if(AC[i].value == fValue.text)
+                {
+                    fiValue.showError("this value already exists in current list");
+                    return;
+                }
+            }
+
+
+            listDialog.addItem(fLabel.text, fValue.text);
+            customPopUpManager.removePopUp(this);
+        }
+
+        private function fUpdateClick():void
+        {
+            listDialog.editItem(fLabel.text, fValue.text);
+            customPopUpManager.removePopUp(this);
+        }
+
+        private function Validate():Boolean
+        {
+            return Validator.validateValidationFormItems(myForm.getChildren());
+        }
+
+        ]]>
+	</mx:Script>
+
+    <mx:VBox left="15" right="15" top="10">
+        <mx:Form id="myForm" paddingBottom="0" paddingTop="0" labelWidth="45">
+            <custom:ValidationFormItem id="fiLabel" label="Label" fiLabel="Label" doValidation="true" isRequired="true">
+                <mx:TextInput id="fLabel" width="160" />
+            </custom:ValidationFormItem>
+            <custom:ValidationFormItem id="fiValue" label="Value" fiLabel="Value" doValidation="true" isRequired="true">
+                <mx:TextInput id="fValue" width="160" />
+            </custom:ValidationFormItem>
+        </mx:Form>
+    </mx:VBox>
+    <mx:HBox right="15" bottom="10">
+        <mx:Button id="fCreate" label="Continue" click="fCreateClick()" />
+        <mx:Button id="fUpdate" label="Continue" click="fUpdateClick()" />
+        <mx:Button id="fCancel" label="Cancel" click="customPopUpManager.removePopUp(this)" />
+    </mx:HBox>
+</mx:TitleWindow>

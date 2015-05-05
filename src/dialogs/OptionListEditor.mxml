@@ -1,0 +1,159 @@
+<mx:TitleWindow xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" width="290" height="390" 
+	title="Edit Option List"  showCloseButton="true" close="customPopUpManager.removePopUp(this)" creationComplete="init()">
+	<mx:Script>
+		<![CDATA[
+        import components.customPopUpManager;
+        import fieldSettingsDialogs.fieldSelectSettings;
+        import helpers.Layer;
+        import mx.collections.ArrayCollection;
+        import mx.core.FlexGlobals;
+
+        private var mainApp:FlexDocDesigner = FlexDocDesigner(FlexGlobals.topLevelApplication);
+        [Bindable]public var parentObj:fieldSelectSettings = null;
+        public var optionList:Array = new Array();
+        public var options:ArrayCollection = new ArrayCollection();
+        private var moveIndex:int = -1;
+        private function init():void{
+            refreshList();
+            fNewItem.setFocus();
+            fOptionList.selectedIndex = optionList.length-1;
+            for(var i:int=0; i<optionList.length; i++)
+            {
+                if(optionList[i]["isDefault"]) { fOptionList.selectedIndex = i; break; }
+            }
+        }
+
+        public function saveOptionList():void
+        {
+            parentObj.optionList = optionList;
+            customPopUpManager.removePopUp(this);
+        }
+
+        public function cancel():void
+        {
+            var fields:Array = Layer.layer["fields"];
+            for(var i:int=0; i<fields.length; i++){
+                if(fields[i]["id"] == parentObj.fieldData["id"]){
+                    parentObj.fOptionList.text = fields[i]["binding"];
+                    break;
+                }
+            }
+        }
+
+        private function refreshList(selectedIndex:int=-1):void
+        {
+            options.removeAll();
+            for(var i:int=0; i<optionList.length; i++)
+            {
+                var label:String = optionList[i]["label"] +" ("+ optionList[i]["data"] +")";
+                if(optionList[i]["isDefault"]) { label += " - default"; }
+                var item:Object = {label: label, data: optionList[i]["data"], isDefault:false};
+                if(optionList[i]["isDefault"]) { item.isDefault = true; }
+                options.addItem(item);
+            }
+            fOptionList.dataProvider = options;
+            if(optionList.length>selectedIndex && selectedIndex>-1) { fOptionList.selectedIndex = selectedIndex; }
+            else { fOptionList.selectedIndex = optionList.length-1; }
+            toggleControls();
+            parentObj.fOptionList.text = "["+parentObj.ArrayToString(optionList)+"]";
+        }
+
+        public function addNewItem():void
+        {
+            var str:String = fNewItem.text;
+            if(str != "")
+            {
+                var arr:Array = str.split("=");
+                var item:Object = new Object();
+                item["data"] = arr[0];
+                if(arr[1]) item["label"] = arr[1];
+                else item["label"] = arr[0];
+                optionList.push(item);
+                fNewItem.text = "";
+                refreshList(optionList.length-1);
+                moveIndex = -1;
+                fNewItem.setFocus();
+            }
+        }
+
+        private function deleteItem():void
+        {
+            var ind:int = fOptionList.selectedIndex;
+            optionList.splice(ind,1);
+            refreshList(ind);
+            moveIndex = -1;
+        }
+
+        private function moveItem(direction:int):void
+        {
+            var ind:int = fOptionList.selectedIndex;
+            if(moveIndex!=-1) ind = moveIndex;
+            var item:Array = optionList[ind];
+            optionList[ind] = optionList[ind+direction];
+            optionList[ind+direction] = item;
+            moveIndex = ind+direction;
+            refreshList(ind+direction);
+        }
+
+        private function toggleControls():void
+        {
+            fDeleteItem.enabled = true;
+            fMakeDefault.enabled = true;
+            fMoveItemUp.enabled = true;
+            fMoveItemDown.enabled = true;
+            if(moveIndex != -1)
+            {
+                if(moveIndex == 0) { fMoveItemUp.enabled = false; }
+                if(moveIndex == optionList.length-1) { fMoveItemDown.enabled = false; }
+            }
+            else
+            {
+                if(fOptionList.selectedIndex == -1)
+                {
+                    fDeleteItem.enabled = false;
+                    fMakeDefault.enabled = false;
+                    fMoveItemUp.enabled = false;
+                    fMoveItemDown.enabled = false;
+                }
+                if(fOptionList.selectedIndex == 0) { fMoveItemUp.enabled = false; }
+                if(fOptionList.selectedIndex == optionList.length-1) { fMoveItemDown.enabled = false; }
+            }
+        }
+
+        private function toggleDefault():void
+        {
+            var ind:int = fOptionList.selectedIndex;
+            var wasDefault:Boolean = options.getItemAt(ind).isDefault;
+            for(var i:int=0; i<options.length; i++) { options.getItemAt(i).isDefault = false; optionList[i]["isDefault"] = false; }
+            if(!wasDefault) { options.getItemAt(ind).isDefault = true; optionList[ind]["isDefault"] = true; }
+            refreshList(ind);
+        }
+
+        private function newItemKeyPressed(event:KeyboardEvent):void
+        {
+            if(event.keyCode == 13) { addNewItem(); }
+        }
+		]]>
+	</mx:Script>		
+	<mx:Form id="myForm" width="280">
+		<mx:HBox>
+			<mx:TextInput id="fNewItem" keyDown="newItemKeyPressed(event);"/>
+			<mx:Button id="fAddNewItem" label="Add Item" click="addNewItem()"  />
+		</mx:HBox>
+		<mx:List id="fOptionList" width="100%" itemClick="moveIndex=-1; toggleControls();" />
+		<mx:HBox paddingTop="10">
+			<mx:Button id="fDeleteItem" label="Delete" enabled="false" click="deleteItem()" />
+			<mx:Button id="fMoveItemUp" label="Up" enabled="false" click="moveItem(-1)" />
+			<mx:Button id="fMoveItemDown" label="Down" enabled="false" click="moveItem(1)" />
+		</mx:HBox>
+		<mx:HBox paddingBottom="10">
+			<mx:Button id="fMakeDefault" label="Toggle Default" enabled="false" click="toggleDefault()" />
+		</mx:HBox>
+		<mx:HRule width="100%" height="1" />
+		<mx:HBox paddingTop="10" paddingLeft="77">
+			<mx:Button id="fSaveList" label="Save" click="saveOptionList()" />
+			<mx:Button id="fCancelSave" label="Cancel" click="customPopUpManager.removePopUp(this)" />
+		</mx:HBox>
+    </mx:Form>
+
+</mx:TitleWindow>

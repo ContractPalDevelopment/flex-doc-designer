@@ -1,0 +1,117 @@
+<mx:TitleWindow xmlns:mx="http://www.adobe.com/2006/mxml" xmlns:custom="components.*"
+                layout="absolute" width="320" height="250"
+                title="Signature Settings" showCloseButton="true" close="customPopUpManager.removePopUp(this)"
+                creationComplete="init()">
+	<mx:Script>
+		<![CDATA[
+        import components.customPopUpManager;
+        import helpers.Layer;
+        import mx.core.FlexGlobals;
+
+        private var mainApp:FlexDocDesigner = FlexDocDesigner(FlexGlobals.topLevelApplication);
+        public var fieldData:Object;
+
+        private function init():void {
+            fRole.dataProvider = CommonLists.getRoleList();
+            fType.dataProvider = CommonLists.getSignatureTypeList();
+            fRecordTime.dataProvider = CommonLists.getRecordTimeList();
+            fSigImage.dataProvider = CommonLists.getSigImageList();
+
+            fSigId.text = fieldData["sigId"];
+            fRole.selectedIndex = CommonMethods.getSelectedIndex(fRole, fieldData["role"]);
+            fType.selectedIndex = CommonMethods.getSelectedIndex(fType,  fieldData["type"]);
+            fRecordTime.selectedIndex = CommonMethods.getSelectedIndex(fRecordTime, fieldData["recordTime"]);
+            fSigImage.selectedIndex = CommonMethods.getSelectedIndex(fSigImage,  fieldData["image"]);
+
+            fTypeChange();
+
+            if(fieldData["native"] == "true"){
+                fType.enabled = false;
+            }
+        }
+
+        public function saveAndClose():void {
+            if(!Validate()) return;
+
+            fieldData["role"] = fRole.selectedItem.data;
+            fieldData["type"] = fType.selectedItem.data;
+            fieldData["recordTime"] = fRecordTime.selectedItem.data;
+            fieldData["image"] = fSigImage.selectedItem.data;
+
+            Layer.drawLayer();
+            customPopUpManager.removePopUp(this);
+        }
+
+        private function Validate():Boolean{
+            return Validator.validateValidationFormItems(myForm.getChildren());
+        }
+
+        private function fTypeChange():void
+        {
+            fiRecordTime.isRequired = false;
+            fiRecordTime.hideError();
+            hideVFI(fiRecordTime);
+            hideVFI(fiSigImage);
+            switch(fType.selectedItem.data)
+            {
+                case "audio":
+                    fiRecordTime.isRequired = true;
+                    showVFI(fiRecordTime);
+                    showVFI(fiSigImage);
+                    break;
+                case "image":
+                    break;
+                case "click":
+                    showVFI(fiSigImage);
+                    break;
+            }
+        }
+
+        private function showVFI(vfi:ValidationFormItem):void
+        {
+            vfi.visible = true;
+            vfi.includeInLayout = true;
+        }
+        private function hideVFI(vfi:ValidationFormItem):void
+        {
+            vfi.visible = false;
+            vfi.includeInLayout = false;
+        }
+
+        ]]>
+	</mx:Script>
+    <mx:VBox>
+        <mx:Form id="myForm" width="315" labelWidth="90">
+            <custom:ValidationFormItem id="fiSigId" fiLabel="Id" label="Id">
+                <mx:TextInput id="fSigId" width="160" enabled="false" />
+            </custom:ValidationFormItem>
+
+            <custom:ValidationFormItem id="fiRole" fiLabel="Role" label="Role" doValidation="true" isRequired="true">
+                <mx:ComboBox id="fRole" width="160" labelField="label" change="fiRole.hideError()" />
+            </custom:ValidationFormItem>
+
+            <custom:ValidationFormItem id="fiType" fiLabel="Type" label="Type">
+                <mx:ComboBox id="fType" width="160" labelField="label" change="fTypeChange()" />
+            </custom:ValidationFormItem>
+
+            <custom:ValidationFormItem id="fiRecordTime" fiLabel="Record Time" label="Record Time" doValidation="true" validateInt="true">
+                <mx:ComboBox id="fRecordTime" width="160" change="fiRecordTime.hideError()" />
+            </custom:ValidationFormItem>
+
+            <custom:ValidationFormItem id="fiSigImage" fiLabel="Image" label="Image" doValidation="true">
+                <mx:ComboBox id="fSigImage" width="160" />
+            </custom:ValidationFormItem>
+
+            <mx:Text textAlign="right" text="* Required" width="100%" />
+        </mx:Form>
+    </mx:VBox>
+
+    <mx:VBox id="buttons" bottom="10" right="15">
+		<mx:HRule width="100%" height="1"/>
+        <mx:HBox>
+            <mx:Button label="Continue" click="saveAndClose()"/>
+            <mx:Button label="Cancel" click="customPopUpManager.removePopUp(this)"/>
+        </mx:HBox>
+    </mx:VBox>
+
+</mx:TitleWindow>

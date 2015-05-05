@@ -1,0 +1,47 @@
+<mx:TitleWindow xmlns:mx="http://www.adobe.com/2006/mxml" layout="vertical" width="300"
+	title="Binded Signature Not Found"  showCloseButton="true"
+    close="customPopUpManager.removePopUp(this)" creationComplete="init()"
+    paddingTop="10" paddingLeft="15" paddingRight="15" paddingBottom="10">
+	<mx:Script>
+		<![CDATA[
+        import components.customPopUpManager;
+        import helpers.Layer;
+        import helpers.Requests;
+        import mx.collections.ArrayCollection;
+        import mx.core.FlexGlobals;
+
+        private var mainApp:FlexDocDesigner = FlexDocDesigner(FlexGlobals.topLevelApplication);
+        public var referencesAC:ArrayCollection = new ArrayCollection();
+
+        private function init():void
+        {
+            message.text = "You have \n";
+
+            for(var i:int = 0; i<referencesAC.length; i++)
+            {
+                message.text += referencesAC[i]["id"] + " binded to " + referencesAC[i]["reference"] + "\n";
+            }
+            message.text += "which can no longer be binded to.\n\n";
+            message.text += 'Click "Remove references" button to remove all references to the signature and continue save changes';
+        }
+
+        private function removeReferences():void
+        {
+            for(var i:int = 0; i<referencesAC.length; i++)
+            {
+                referencesAC[i]["reference"] = "";
+            }
+            Layer.drawLayer();
+            customPopUpManager.removePopUp(this);
+            Requests.saveChanges();
+        }
+		]]>
+	</mx:Script>
+    <mx:HBox width="100%" maxHeight="300">
+	    <mx:Text id="message" width="100%" />
+    </mx:HBox>
+	<mx:HBox width="100%" horizontalAlign="right">
+		<mx:Button id="fRemove" label="Remove references" click="removeReferences()"  />
+		<mx:Button id="fCancel" label="Cancel" click="customPopUpManager.removePopUp(this)" />
+	</mx:HBox>
+</mx:TitleWindow>

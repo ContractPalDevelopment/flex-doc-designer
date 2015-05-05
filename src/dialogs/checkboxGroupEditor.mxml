@@ -1,0 +1,72 @@
+<mx:TitleWindow xmlns:mx="http://www.adobe.com/2006/mxml" xmlns:custom="components.*"
+                layout="absolute" width="290" height="210"
+	title="Check Box Common Properties"  showCloseButton="true" close="customPopUpManager.removePopUp(this)" creationComplete="init()">
+	<mx:Script>
+		<![CDATA[
+        import components.customPopUpManager;
+        import fieldSettingsDialogs.CommonLists;
+        import fieldSettingsDialogs.CommonMethods;
+        import fieldSettingsDialogs.Validator;
+        import helpers.Layer;
+        import mx.core.FlexGlobals;
+
+        private var mainApp:FlexDocDesigner = FlexDocDesigner(FlexGlobals.topLevelApplication);
+        public var idArray:Array = new Array();
+        private function init():void{
+            fRole.dataProvider = CommonLists.getRoleList();
+
+            for(var i:int=0; i<idArray.length; i++)
+            {
+                var value:String = Layer.layer["fields"][idArray[i]]["value"];
+                var role:String = Layer.layer["fields"][idArray[i]]["role"];
+                var cpGroup:String = Layer.layer["fields"][idArray[i]]["groupId"];
+                if(value != "" && fValue.text == "") { fValue.text = value; }
+                if(role != "" && (fRole.selectedIndex == -1 || fRole.selectedIndex == 0)) { fRole.selectedIndex = CommonMethods.getSelectedIndex(fRole,  role); }
+                if(cpGroup != "" && fGroupId.text == "") { fGroupId.text = cpGroup; }
+            }
+        }
+
+        public function saveAndClose():void
+        {
+            if(!Validate()) { return; }
+            for(var i:int=0; i<idArray.length; i++)
+            {
+                if(Layer.layer["fields"][idArray[i]]["native"] != "true"){
+                    Layer.layer["fields"][idArray[i]]["value"] = fValue.text;
+                }
+                Layer.layer["fields"][idArray[i]]["role"] = fRole.text;
+                Layer.layer["fields"][idArray[i]]["groupId"] = fGroupId.text;
+            }
+            customPopUpManager.removePopUp(this);
+        }
+
+        public function Validate():Boolean
+        {
+            return Validator.validateValidationFormItems(myForm.getChildren());
+        }
+		]]>
+	</mx:Script>		
+	<mx:Form id="myForm" width="280">
+        <custom:ValidationFormItem id="fiValue" fiLabel="Value" label="Value" doValidation="true" isRequired="true">
+            <mx:TextInput id="fValue" width="160" />
+        </custom:ValidationFormItem>
+
+        <custom:ValidationFormItem id="fiRole" fiLabel="Role" label="Role" doValidation="true" isRequired="true">
+            <mx:ComboBox id="fRole" width="160" labelField="label" />
+        </custom:ValidationFormItem>
+
+        <custom:ValidationFormItem id="fiGroupId" fiLabel="Group Id" label="Group Id">
+            <mx:TextInput id="fGroupId" width="160" />
+        </custom:ValidationFormItem>
+
+        <mx:Text textAlign="right" text="* Required" width="100%" />
+    </mx:Form>
+
+    <mx:VBox id="buttons" bottom="10" right="15">
+		<mx:HRule width="100%" height="1"/>
+        <mx:HBox>
+            <mx:Button label="Continue" click="saveAndClose()"/>
+            <mx:Button label="Cancel" click="customPopUpManager.removePopUp(this)"/>
+        </mx:HBox>
+    </mx:VBox>
+</mx:TitleWindow>

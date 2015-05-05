@@ -1,0 +1,170 @@
+<mx:TitleWindow xmlns:mx="http://www.adobe.com/2006/mxml" xmlns:custom="components.*"
+                layout="absolute" width="310" height="355"
+	title="Profile Field Settings"  showCloseButton="true" close="customPopUpManager.removePopUp(this)" creationComplete="initStandardTab()">
+		
+	<mx:Script>
+		<![CDATA[
+        import components.customPopUpManager;
+        import helpers.Layer;
+        import helpers.Page;
+        import mx.core.FlexGlobals;
+
+        private var mainApp:FlexDocDesigner = FlexDocDesigner(FlexGlobals.topLevelApplication);
+        public var fieldData:Object;
+
+        public var miniDialog:Boolean = false;
+
+        private function initStandardTab():void {
+            fRole.dataProvider = CommonLists.getRoleList();
+            fType.dataProvider = CommonLists.getProfileTypeList();
+
+            fId.text = fieldData["id"];
+            fName.text = fieldData["name"];
+            fRole.selectedIndex = CommonMethods.getSelectedIndex(fRole, fieldData["role"]);
+            fType.selectedIndex = CommonMethods.getSelectedIndex(fType, fieldData["subType"]);
+            fHeight.text = fieldData["height"];
+            fWidth.text = fieldData["width"];
+            fReadonly.selected = fieldData["readonly"] == "true";
+
+            fiWidth.maxIntValue = Page.getPageWidth() - int(fieldData["left"]);
+
+            if(fieldData["native"] == "true"){
+                fName.enabled = false;
+                fiName.doValidation = false;
+                fiName.isRequired = false;
+                fWidth.enabled = false;
+            }
+        }
+
+        private function initValidationTab():void{
+            fBindedSig.dataProvider = CommonLists.getMainSigList();
+
+            if (fieldData["use"] == "R") {
+                fRequired.selected = true;
+            }
+            fBindedSig.selectedIndex = CommonMethods.getSelectedIndex(fBindedSig, fieldData["reference"]);
+        }
+
+        public function saveAndClose():void {
+            if (!Validate()) return;
+
+            fieldData["name"] = fName.text;
+            fieldData["role"] = fRole.selectedItem.data;
+            fieldData["subType"] = fType.selectedItem.data;
+            fieldData["height"] = fHeight.text;
+            fieldData["width"] = fWidth.text;
+            fieldData["readonly"] = String(fReadonly.selected);
+            if(formValidation){
+                if (fRequired.selected) {
+                    fieldData["use"] = "R";
+                }
+                else {
+                    fieldData["use"] = "O";
+                }
+                fieldData["reference"] = fBindedSig.selectedItem.data;
+            }
+
+            Layer.drawLayer();
+            customPopUpManager.removePopUp(this);
+        }
+
+        public function Validate():Boolean {
+            var isValid:Boolean = true;
+            var validationResult:Boolean;
+            var firstTabValid:Boolean = true;
+            var secondTabValid:Boolean = true;
+
+            validationResult = Validator.validateValidationFormItems(formStandard.getChildren());
+            if(!validationResult){ isValid = false; firstTabValid = false; }
+            if (formValidation) {
+                validationResult = Validator.validateValidationFormItems(formValidation.getChildren());
+                if (!validationResult) { isValid = false; secondTabValid = false; }
+            }
+            switchTabsDueToValidation(firstTabValid, secondTabValid);
+            return isValid;
+        }
+
+        private function switchTabsDueToValidation(first:Boolean, second:Boolean):void
+        {
+            switch(tabNav.selectedIndex)
+            {
+                case 0:
+                    if(first && !second){ tabNav.selectedIndex = 1; }
+                    break;
+                case 1:
+                    if(!first && second){ tabNav.selectedIndex = 0; }
+                    break;
+            }
+        }
+
+        private function hideFormItem(fi:ValidationFormItem):void {
+            fi.includeInLayout = false;
+            fi.visible = false;
+        }
+
+        private function showFormItem(fi:ValidationFormItem):void {
+            fi.includeInLayout = true;
+            fi.visible = true;
+        }
+        ]]>
+	</mx:Script>
+
+	<mx:TabNavigator borderStyle="solid" left="4" top="4" right="4" id="tabNav">
+		<mx:VBox label="Standard" id="standardTab" height="245">
+            <mx:VBox>
+                <mx:Form id="formStandard" labelWidth="70" paddingTop="10" paddingBottom="10">
+                    <custom:ValidationFormItem id="fiId" label="Id" fiLabel="Id">
+                        <mx:TextInput id="fId" width="160" enabled="false" />
+                    </custom:ValidationFormItem>
+
+                    <custom:ValidationFormItem id="fiName" label="Name" fiLabel="Name" doValidation="true" isRequired="true" regExp="/^[_a-zA-Z]([_a-zA-Z0-9])*$/">
+                        <mx:TextInput restrict="_ A-Z a-z 012345689" id="fName" width="160"/>
+                    </custom:ValidationFormItem>
+
+                    <custom:ValidationFormItem id="fiRole" label="Role" fiLabel="Role" doValidation="true" isRequired="true">
+                        <mx:ComboBox id="fRole" width="160" change="fiRole.hideError()" />
+                    </custom:ValidationFormItem>
+
+                    <custom:ValidationFormItem id="fiType" label="Type" fiLabel="Type" doValidation="true" isRequired="true">
+                        <mx:ComboBox id="fType" width="160" change="fiType.hideError()" />
+                    </custom:ValidationFormItem>
+
+                    <custom:ValidationFormItem id="fiHeight" label="Height" fiLabel="Height">
+                        <mx:TextInput id="fHeight" width="160" enabled="false" editable="false" />
+                    </custom:ValidationFormItem>
+
+                    <custom:ValidationFormItem id="fiWidth" label="Width" fiLabel="Width" doValidation="true" validateInt="true">
+                        <mx:TextInput id="fWidth" width="160" restrict="0123456789" />
+                    </custom:ValidationFormItem>
+
+                    <custom:ValidationFormItem id="fiReadonly" label="Read-only" fiLabel="Read-only">
+                        <mx:CheckBox id="fReadonly" />
+                    </custom:ValidationFormItem>
+
+                    <mx:Text textAlign="right" text="* Required" width="100%"  />
+                </mx:Form>
+            </mx:VBox>
+        </mx:VBox>
+
+		<mx:VBox label="Validation" id="validationTab" height="245">
+			<mx:Form id="formValidation" labelWidth="70" creationComplete="initValidationTab()" paddingTop="10" paddingBottom="10">
+                    <custom:ValidationFormItem id="fiRequired" label="Required" fiLabel="Required">
+                        <mx:CheckBox id="fRequired" />
+                    </custom:ValidationFormItem>
+
+                    <custom:ValidationFormItem id="fiBindedSig" label="Binded Sig" fiLabel="Binded Sig">
+                        <mx:ComboBox width="160" id="fBindedSig" labelField="label" />
+                    </custom:ValidationFormItem>
+
+                    <mx:Text textAlign="right" text="* Required" width="100%"  />
+            </mx:Form>
+        </mx:VBox>
+    </mx:TabNavigator>
+
+    <mx:VBox id="buttons" bottom="10" right="15">
+        <mx:HBox>
+            <mx:Button label="Continue" click="saveAndClose()"/>
+            <mx:Button label="Cancel" click="customPopUpManager.removePopUp(this)"/>
+        </mx:HBox>
+    </mx:VBox>
+</mx:TitleWindow>

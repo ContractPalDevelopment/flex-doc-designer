@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Group xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		  xmlns:s="library://ns.adobe.com/flex/spark" 
+		  xmlns:mx="library://ns.adobe.com/flex/mx" creationComplete="init()">
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+	</fx:Declarations>
+	<fx:Script>
+		<![CDATA[
+        import mx.core.FlexGlobals;
+
+        [Embed(source="../assets/fields/checkbox_checked.png")] 	[Bindable] public var img_checkboxChecked:Class;
+        [Embed(source="../assets/fields/checkbox_unchecked.png")] 	[Bindable] public var img_checkboxUnchecked:Class;
+        [Embed(source="../assets/fields/date.png")] 				[Bindable] public var img_date:Class;
+        [Embed(source="../assets/fields/initials.png")] 			[Bindable] public var img_initial:Class;
+        [Embed(source="../assets/fields/profile.png")] 			    [Bindable] public var img_profile:Class;
+        [Embed(source="../assets/fields/select.png")] 				[Bindable] public var img_select:Class;
+        [Embed(source="../assets/fields/signature.png")] 			[Bindable] public var img_signature:Class;
+        [Embed(source="../assets/fields/text_area.png")] 			[Bindable] public var img_textArea:Class;
+        [Embed(source="../assets/fields/text.png")] 				[Bindable] public var img_text:Class;
+
+        private static var mainApp:FlexDocDesigner = FlexDocDesigner(FlexGlobals.topLevelApplication);
+        public var fieldType:String;
+        private function init():void{
+            switch(fieldType){
+                case "checkbox":
+                    this.width = 14;
+                    this.height = 14;
+                    logo.source = img_checkboxUnchecked;
+                    break;
+                case "date":
+                    this.width = 100;
+                    this.height = 19;
+                    logo.source = img_date;
+                    break;
+                case "initial":
+                    this.width = 21;
+                    this.height = 21;
+                    logo.source = img_initial;
+                    break;
+                case "profile":
+                    this.width = 100;
+                    this.height = 19;
+                    logo.source = img_profile;
+                    break;
+                case "select":
+                    this.width = 100;
+                    this.height = 19;
+                    logo.source = img_select;
+                    break;
+                case "signature":
+                    this.width = 200;
+                    this.height = 36;
+                    logo.source = img_signature;
+                    break;
+                case "text":
+                    this.width = 100;
+                    this.height = 19;
+                    logo.source = img_text;
+                    break;
+                case "textarea":
+                    this.width = 100;
+                    this.height = 19;
+                    logo.source = img_textArea;
+                    break;
+            }
+            this.x = mainApp.panel.contentMouseX - Math.floor(this.width / 2);
+            this.y = mainApp.panel.contentMouseY - Math.floor(this.height / 2);
+            bg.graphics.beginFill(0x79C6FE);
+            bg.graphics.drawRect(0,0,this.width, this.height);
+            bg.graphics.endFill();
+            drawBorder();
+        }
+
+        private function drawBorder():void{
+            var w:int = this.width;
+            var h:int = this.height;
+            frame.graphics.lineStyle(1, 0xD4D0C8, 1.0, false, "normal", CapsStyle.SQUARE, JointStyle.MITER);
+            frame.graphics.moveTo(w, 0);
+            frame.graphics.lineTo(w, h);
+            frame.graphics.lineTo(0, h);
+            frame.graphics.lineStyle(1, 0x808080, 1.0, false, "normal", CapsStyle.SQUARE, JointStyle.MITER);
+            frame.graphics.lineTo(0, 0);
+            frame.graphics.lineTo(w, 0);
+            frame.graphics.lineStyle(1, 0x373737, 1.0, false, "normal", CapsStyle.SQUARE, JointStyle.MITER);
+            frame.graphics.moveTo(w, 1);
+            frame.graphics.lineTo(1, 1);
+            frame.graphics.lineTo(1, h);
+        }
+		]]>
+	</fx:Script>
+	<mx:Image id="bg" />
+	<mx:Image id="logo" x="1" y="1" />
+	<mx:Image id="frame" />
+</s:Group>

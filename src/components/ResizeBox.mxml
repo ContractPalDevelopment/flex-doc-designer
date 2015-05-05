@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:VBox xmlns:fx="http://ns.adobe.com/mxml/2009"
+		 xmlns:mx="library://ns.adobe.com/flex/mx" 
+		 width="7" height="7" backgroundColor="#ff0000" 
+		 mouseOver="setResizeCursor(event)" mouseOut="setDefaultCursor()" 
+		 mouseDown="resizeStart()"
+		 >
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+	</fx:Declarations>
+	<fx:Metadata>
+		[Event(name="endResize", type="flash.events.Event")]
+	</fx:Metadata>
+	<fx:Script>
+		<![CDATA[
+			import mx.controls.Image;
+			import mx.core.FlexGlobals;
+			import mx.graphics.ImageSnapshot;
+			import mx.managers.CursorManager;
+
+			use namespace mx_internal;
+			
+			[Embed(source="../assets/cursor/resizeCursorH.gif")] 		[Bindable] public var resizeCursorH:Class;
+			[Embed(source="../assets/cursor/resizeCursorTLBR.gif")] 	[Bindable] public var resizeCursorTLBR:Class;
+			[Embed(source="../assets/cursor/resizeCursorTRBL.gif")] 	[Bindable] public var resizeCursorTRBL:Class;
+			[Embed(source="../assets/cursor/resizeCursorV.gif")] 		[Bindable] public var resizeCursorV:Class;
+
+            private var mainApp:FlexDocDesigner = FlexDocDesigner(FlexGlobals.topLevelApplication);
+
+			public var vDisp:int = 0;
+			public var hDisp:int = 0;
+			private var oldPos:Point;
+			protected var shadow:Image;
+			private function resizeStart():void{
+				var bitmap:BitmapData = ImageSnapshot.captureBitmapData(this);
+				shadow = new Image();
+				shadow.source = new Bitmap(bitmap);
+				shadow.alpha = 0.5;
+				var panelCoord:Point = mainApp.panel.localToGlobal(new Point(0,0));
+				oldPos = this.localToGlobal(new Point(0,0));
+				shadow.x = oldPos.x-panelCoord.x;
+				shadow.y = oldPos.y-panelCoord.y-32;
+                oldPos = new Point(shadow.x, shadow.y);
+				mainApp.panel.addChild(shadow);
+				var m:Image = mainApp.mimg;
+				shadow.startDrag(false, new Rectangle(m.x, m.y, m.width-this.width, m.height-this.height));
+				shadow.addEventListener(MouseEvent.MOUSE_UP, function(e:MouseEvent):void{
+					shadow.stopDrag();
+					mainApp.removeEventListener(MouseEvent.MOUSE_UP, globalMouseUp);
+                    hDisp = shadow.x - oldPos.x;
+                    vDisp = shadow.y - oldPos.y;
+					dispatchEvent(new Event("endResize"));
+				});
+				mainApp.addEventListener(MouseEvent.MOUSE_UP, globalMouseUp);
+			}
+
+			protected function globalMouseUp(e:MouseEvent):void{
+				shadow.dispatchEvent(e);
+			}
+
+			private function setResizeCursor(e:MouseEvent):void{
+				var resizeBox:VBox = VBox(e.currentTarget);
+				switch(resizeBox.name)
+				{
+					case "tl":
+					case "br":
+						resizeBox.cursorManager.setCursor(resizeCursorTLBR, 2, -10, -10);
+						break;
+					case "tc":
+					case "bc":
+						resizeBox.cursorManager.setCursor(resizeCursorV, 2, -10, -10);
+						break;
+					case "cl":
+					case "cr":
+						resizeBox.cursorManager.setCursor(resizeCursorH, 2, -10, -10);
+						break;
+					case "bl":
+					case "tr":
+						resizeBox.cursorManager.setCursor(resizeCursorTRBL, 2, -10, -10);
+						break;
+				}
+			}
+			private function setDefaultCursor():void{
+				CursorManager.removeAllCursors();
+			}
+		]]>
+	</fx:Script>
+</mx:VBox>

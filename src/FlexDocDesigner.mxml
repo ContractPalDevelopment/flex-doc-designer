@@ -1,0 +1,279 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Application xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute"
+				xmlns="*" creationComplete="init()" mouseUp="fixFocus(event)" >
+	<mx:Script>
+		<![CDATA[
+        import components.Field;
+        import components.customPopUpManager;
+
+        import helpers.FieldsManager;
+        import helpers.Images;
+        import helpers.Layer;
+        import helpers.MenuHandlers;
+        import helpers.Messaging;
+        import helpers.Page;
+        import helpers.Requests;
+
+        import listEditor.listsBindings;
+
+        import mx.collections.ArrayCollection;
+        import mx.controls.ProgressBar;
+        import mx.core.FlexGlobals;
+
+        public var roleAC:ArrayCollection;
+        public var profileTypeAC:ArrayCollection;
+        public var dateTypeAC:ArrayCollection;
+        public var dateFormatAC:ArrayCollection;
+        public var fieldClassAC:ArrayCollection;
+        public var sigClassAC:ArrayCollection;
+        public var patternAC:ArrayCollection;
+        public var sigImageAC:ArrayCollection;
+        public var selectBindingAC:ArrayCollection;
+        public var docBindingObj:Object;
+        public var fieldInfoTip:Object = {infoType:"", show:false};
+
+        private function init():void {
+            var params:Object = FlexGlobals.topLevelApplication.parameters;
+            Requests.cpURL = params.cpURL;
+            Requests.exitFunction = params.exitFunction;
+            Requests.errorFunction = params.errorFunction;
+            Requests.dirtyFunction = params.dirtyFunction;
+            if(params.textAreaMaxLength){
+                Layer.textAreaMaxLength = params.textAreaMaxLength;
+            }
+            Page.currentPage = params.pageNumber;
+            panel.title = params.name;
+            if (params.debug && params.debug == "true") {
+                logsButton.height = 45;
+            }
+            if (params.showDocName &&  params.showDocName == "false"){
+                panel.setStyle("headerHeight", "0");
+            }
+            Page.displayCoBrandingIcon(params.brandingImage);
+            Page.displaySaveIcon(params.saveIcon);
+            Page.displayExitIcon(params.exitIcon);
+
+            Requests.initRequest();
+            keyBoardController.setFocus(); // Focuses on textInput field to fire keydown event
+        }
+
+
+        public function toggleLogs():void {
+            var targetState:Boolean = !logsBox.visible;
+            logsBox.visible = targetState;
+
+            var idx:uint;
+            var len:uint = divider.numDividers;
+            for (idx = 0; idx < len; idx++) {
+                divider.getDividerAt(idx).visible = targetState;
+            }
+            if (targetState) {
+                divider.setStyle("verticalGap", 10);
+                logsBox.height = 100;
+            }
+            else {
+                divider.setStyle("verticalGap", 0);
+                logsBox.height = 0;
+            }
+        }
+
+        protected function keyDown(event:KeyboardEvent):void {
+
+            if (customPopUpManager.popUpCount > 0) return;
+            if (FieldsManager.getSelectedFields().length < 1) return;
+            switch (event.keyCode) {
+                case 46:
+                    var fields:Array = FieldsManager.getSelectedFields();
+                    for (var i:int = 0; i < fields.length; i++) {
+                        var field:Field = Field(fields[i]);
+                        if (!field.isNative) {
+                            Layer.deleteField(field.name);
+                        }
+                    }
+                    Layer.drawLayer();
+                    break;
+
+                case 37:
+                case 38:
+                case 39:
+                case 40:
+                    keyBoardMoveField(event);
+                    break;
+
+                default:
+                    return;
+            }
+        }
+
+        private function keyBoardMoveField(event:KeyboardEvent):void {
+            var rect:Rectangle = FieldsManager.getSelectedFieldsRectangle();
+            switch (event.keyCode) {
+                case 37: //arrow left
+                    if (rect.x <= mimg.x) {
+                        return;
+                    }
+                    FieldsManager.moveSelected(-1, 0);
+                    break;
+                case 38: //arrow up
+                    if (rect.y <= mimg.y) {
+                        return;
+                    }
+                    FieldsManager.moveSelected(0, -1);
+                    break;
+                case 39: //arrow right
+                    if (rect.x + rect.width >= mimg.x + mimg.width) {
+                        return;
+                    }
+                    FieldsManager.moveSelected(1, 0);
+                    break;
+                case 40: //arrow down
+                    if (rect.y + rect.height >= mimg.y + mimg.height) {
+                        return;
+                    }
+                    FieldsManager.moveSelected(0, 1);
+                    break;
+            }
+        }
+
+        public function fixFocus(event:MouseEvent):void {
+            try {
+                if (event.target.type.toString() == "input") {
+
+                }
+                else {
+                    keyBoardController.setFocus();
+                }
+            }
+            catch(e:Error) {
+                keyBoardController.setFocus();
+            }
+        }
+
+        public function showLoading(show:Boolean):void {
+            if (show) {
+                var bg:VBox = new VBox();
+                bg.name = "loadingBG";
+                bg.id = "loadingBG";
+                bg.setStyle("backgroundColor", "#cccccc");
+                bg.percentWidth = 100;
+                bg.percentHeight = 100;
+                bg.x = 0;
+                bg.y = -0.1;
+                bg.alpha = 0.6;
+                v1.addChild(bg);
+
+                var pb:ProgressBar = new ProgressBar();
+                pb.name = "loadingProgress";
+                pb.id = "loadingProgress";
+                pb.label = "Please wait...";
+                pb.indeterminate = true;
+                pb.labelPlacement = 'center';
+                pb.setStyle('barColor', uint(0xAEAEAE));
+                pb.height = 26;
+                pb.x = panel.width - 160;
+                var thumbnailsHeight:int = thumbnails.height;
+                if(thumbnailsHeight > 5) { thumbnailsHeight += 3; }
+                pb.y = 67 + thumbnailsHeight;
+                v1.addChild(pb);
+            }
+            else {
+                v1.removeChild(v1.getChildByName("loadingBG"));
+                v1.removeChild(v1.getChildByName("loadingProgress"));
+            }
+        }
+
+        public function leftMouseClick(event:ContextMenuEvent):void {
+            mimg.setConstraintValue("mouseX", mimg.contentMouseX);
+            mimg.setConstraintValue("mouseY", mimg.contentMouseY);
+        }
+
+        public function dblClickTest():void {
+            Messaging.log("double click!");
+        }
+
+        private function launchListsDialog():void {
+            var listsD:listsBindings = listsBindings(customPopUpManager.createPopUp(docContainer, listsBindings, true));
+            customPopUpManager.centerPopUp(listsD);
+        }
+
+        private function thumbnailsScroll(event:MouseEvent):void {
+            thumbnails.horizontalScrollPosition -= event.delta * 6;
+        }
+        ]]>
+	</mx:Script>
+	
+	<mx:Canvas id="v1"
+			   width="100%"
+			   height="100%"
+			   top="0"
+			   left="0" backgroundColor="#d7d7d7">
+		<mx:VBox width="100%" height="100%" verticalGap="0">
+			
+			<mx:Canvas width="100%">
+				<mx:Image source="@Embed('assets/editor/top_menu_bg.png')" scaleContent="true" maintainAspectRatio="false" width="100%" height="61" depth="0" top="0" left="0" />
+				
+				<mx:HBox width="100%" height="67" top="0" left="0" horizontalGap="0">
+					
+					<mx:Image source="@Embed('assets/editor/Doc_folder.png')" width="69" height="67" />
+                    <mx:HBox paddingTop="7" width="450" height="67">
+                        <mx:Image id="coBrandingIcon" width="450" height="60" scaleContent="false" top="7" />
+                    </mx:HBox>
+				</mx:HBox>
+                <mx:HBox top="0" right="30" height="67" horizontalGap="2">
+					<mx:Image id="reveal" buttonMode="true" source="{Images.img_reveal}" width="40" height="61" click="MenuHandlers.toggleReveal();" />
+                    <mx:Image id="undoButton" buttonMode="true" source="@Embed('assets/editor/undo.png')" width="37" height="61" toolTip="Undo" click="MenuHandlers.undoChanges()" enabled="false" />
+                    <mx:Box width="50" />
+                    <mx:Canvas width="33" height="61" buttonMode="true" toolTip="Save" click="Requests.saveChanges()">
+                        <mx:Image id="saveButton_bg" source="@Embed('assets/editor/save_bg.png')" width="33" height="61" />
+                        <mx:Image id="saveIcon" source="@Embed('assets/editor/save_icon.png')" scaleContent="false" top="13" width="33" height="27" />
+                    </mx:Canvas>
+                    <mx:Canvas width="33" height="61" buttonMode="true" toolTip="Exit" click="Requests.exit()">
+                        <mx:Image id="exitButton_bg" source="@Embed('assets/editor/exit_bg.png')" width="33" height="61" />
+                        <mx:Image id="exitIcon" source="@Embed('assets/editor/exit_icon.png')" scaleContent="false" top="13" width="33" height="27" />
+                    </mx:Canvas>
+                </mx:HBox>
+				<mx:Image right="0" source="@Embed('assets/editor/top_menu_bg_right.png')" width="17" height="61" />
+			</mx:Canvas>
+			
+			<mx:Canvas width="100%" height="100%">
+				<mx:VBox width="69" id="toolBar" verticalGap="0">
+					<mx:Image name="signature" id="signature" buttonMode="true" toolTip="Create new signature" source="@Embed('assets/editor/signature.png')" width="69" height="49" scaleContent="false" mouseDown="FieldsManager.createNewField(event);" mouseUp="FieldsManager.unCreateNewField(event)" />
+					<mx:Image name="initial" id="initial" buttonMode="true" toolTip="Create new initial" source="@Embed('assets/editor/initials.png')" width="69" height="46" scaleContent="false" mouseDown="FieldsManager.createNewField(event);" mouseUp="FieldsManager.unCreateNewField(event)" />
+					<mx:Image name="profile" id="profile" buttonMode="true" toolTip="Create new profile field" source="@Embed('assets/editor/profile_data.png')" width="69" height="43" scaleContent="false" mouseDown="FieldsManager.createNewField(event);" mouseUp="FieldsManager.unCreateNewField(event)" />
+					<mx:Image name="checkbox" id="checkbox" buttonMode="true" toolTip="Create new check box" source="@Embed('assets/editor/check_box.png')" width="69" height="46" scaleContent="false" mouseDown="FieldsManager.createNewField(event);" mouseUp="FieldsManager.unCreateNewField(event)" />
+					<mx:Image name="text" id="text" buttonMode="true" toolTip="Create new text field"	source="@Embed('assets/editor/text_field.png')" width="69" height="43" scaleContent="false" mouseDown="FieldsManager.createNewField(event);" mouseUp="FieldsManager.unCreateNewField(event)" />
+					<mx:Image name="textarea" id="textarea" buttonMode="true" toolTip="Create new text area" source="@Embed('assets/editor/text_area.png')" width="69" height="43" scaleContent="false" mouseDown="FieldsManager.createNewField(event);" mouseUp="FieldsManager.unCreateNewField(event)" />
+					<mx:Image name="select" id="select" buttonMode="true" toolTip="Create new select field" source="@Embed('assets/editor/select.png')" width="69" height="45" scaleContent="false" mouseDown="FieldsManager.createNewField(event);" mouseUp="FieldsManager.unCreateNewField(event)" />
+					<mx:Image name="date" id="date" buttonMode="true" toolTip="Create new date field" source="@Embed('assets/editor/date.png')" width="69" height="42" scaleContent="false" mouseDown="FieldsManager.createNewField(event);" mouseUp="FieldsManager.unCreateNewField(event)" />
+                    <mx:Image name="divider" source="@Embed('assets/editor/divider.png')" width="69" height="4" />
+                    <mx:Image name="listsMenuIte" id="listsMenuItem" buttonMode="true" toolTip="Launch Lists Editor" source="@Embed('assets/editor/lists.png')" width="69" height="43" scaleContent="false" click="launchListsDialog()" />
+                    <mx:Image name="logs" id="logsButton" buttonMode="true" toolTip="Toggle Logs" source="@Embed('assets/editor/Logs.png')" width="69" height="0" scaleContent="false" click="toggleLogs()" />
+                    <mx:Image source="@Embed('assets/editor/bottom.png')" width="69" height="35" />
+				</mx:VBox>
+				<mx:VBox width="100%" height="100%" left="69" id="docContainer">
+					<mx:Box width="100%" height="100%" verticalGap="0"><!-- 533-->
+                        <mx:HBox width="0" height="0">
+                            <mx:TextInput id="keyBoardController" name="keyboardController" width="0" keyDown="keyDown(event)" />
+                        </mx:HBox>
+                        <mx:DividedBox id="divider" width="100%" height="100%" verticalGap="0">
+                            <mx:VBox verticalGap="0" width="100%" height="100%">
+                                <mx:Panel id="thumbnails" mouseWheel="thumbnailsScroll(event)" width="100%" layout="absolute" headerHeight="0" backgroundColor="#d7d7d7" visible="false" includeInLayout="false" />
+                                <mx:Panel id="panel"
+                                          width="100%"
+                                          height="100%"
+                                          layout="absolute"
+                                          dropShadowVisible="true"
+                                          backgroundColor="#cccccc">
+                                    <mx:Image id="mimg" x="0" y="0" click="FieldsManager.unSelectAll();" />
+                                </mx:Panel>
+                            </mx:VBox>
+                            <mx:Box id="logsBox" height="0" width="100%" visible="false">
+                                <mx:TextArea id="logs" name="logsName" height="100%" width="100%" />
+                            </mx:Box>
+                       </mx:DividedBox>
+					</mx:Box>
+				</mx:VBox>
+			</mx:Canvas>
+		</mx:VBox>
+	</mx:Canvas>
+</mx:Application>

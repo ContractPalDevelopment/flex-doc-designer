@@ -1,0 +1,128 @@
+<mx:TitleWindow xmlns:mx="http://www.adobe.com/2006/mxml" xmlns:components="components.*"
+                layout="absolute" width="350" height="260"
+                title="Initials Settings" showCloseButton="true" close="customPopUpManager.removePopUp(this)"
+                creationComplete="init()">
+	<mx:Script>
+		<![CDATA[
+        import components.customPopUpManager;
+
+        import helpers.Layer;
+
+        import mx.collections.ArrayCollection;
+        import mx.core.FlexGlobals;
+
+        private var mainApp:FlexDocDesigner = FlexDocDesigner(FlexGlobals.topLevelApplication);
+        public var fieldData:Object;
+
+        private function init():void {
+            fRole.dataProvider = CommonLists.getRoleList();
+            fType.dataProvider = CommonLists.getInitialTypeList();
+            var AC:ArrayCollection = CommonLists.getMainSigList();
+            for(var i:int=0; i<AC.length; i++){
+                if(AC[i].data == fieldData["id"])
+                {
+                    AC.removeItemAt(i);
+                    break;
+                }
+            }
+            fMainSignature.dataProvider = AC;
+
+
+            sigId.text = fieldData["sigId"];
+            fRole.selectedIndex = CommonMethods.getSelectedIndex(fRole, fieldData["role"]);
+            fType.selectedIndex = CommonMethods.getSelectedIndex(fType, fieldData["type"]);
+            fMainSignature.selectedIndex = CommonMethods.getSelectedIndex(fMainSignature, fieldData["reference"]);
+            fGroupId.text = fieldData["groupId"];
+
+            fTypeChange();
+
+            if(fieldData["native"] == "true"){
+                fType.enabled = false;
+            }
+        }
+
+        public function saveAndClose():void {
+            if(!Validate()) return;
+
+            fieldData["role"] = fRole.selectedItem.data;
+            fieldData["type"] = fType.selectedItem.data;
+            fieldData["reference"] = fMainSignature.selectedItem.data;
+            fieldData["groupId"] = fGroupId.text;
+
+            Layer.drawLayer();
+            customPopUpManager.removePopUp(this);
+        }
+
+        private function Validate():Boolean{
+            return Validator.validateValidationFormItems(myForm.getChildren());
+        }
+
+        private function fTypeChange():void {
+            switch (fType.selectedItem.data) {
+                case "click-initial":
+                    fiMainSignature.doValidation = false;
+                    fiMainSignature.isRequired = false;
+                    fiMainSignature.hideError();
+                    fMainSignature.enabled = false;
+                    fiGroupId.doValidation = false;
+                    fiGroupId.isRequired = false;
+                    fiGroupId.hideError();
+                    fGroupId.enabled = false;
+                    fMainSignature.selectedIndex = 0;
+                    break;
+                case "initial-ex":
+                    fiMainSignature.doValidation = true;
+                    fiMainSignature.isRequired = true;
+                    fMainSignature.enabled = true;
+                    fiGroupId.doValidation = true;
+                    fiGroupId.isRequired = true;
+                    fGroupId.enabled = true;
+                    break;
+                case "initial":
+                    fiMainSignature.doValidation = true;
+                    fiMainSignature.isRequired = true;
+                    fMainSignature.enabled = true;
+                    fiGroupId.doValidation = false;
+                    fiGroupId.isRequired = false;
+                    fiGroupId.hideError();
+                    fGroupId.enabled = false;
+                    break;
+            }
+        }
+        ]]>
+	</mx:Script>
+    <mx:VBox>
+        <mx:Form id="myForm" width="320">
+            <components:ValidationFormItem id="fiSigId" fiLabel="Id" label="Id">
+                <mx:TextInput id="sigId" width="160" enabled="false" />
+            </components:ValidationFormItem>
+
+            <components:ValidationFormItem id="fiRole" fiLabel="Role" label="Role" doValidation="true" isRequired="true">
+                <mx:ComboBox id="fRole" width="160" labelField="label" change="fiRole.hideError()" />
+            </components:ValidationFormItem>
+
+            <components:ValidationFormItem id="fiType" fiLabel="Type" label="Type">
+                <mx:ComboBox id="fType" width="160" labelField="label" change="fTypeChange()" />
+            </components:ValidationFormItem>
+
+            <components:ValidationFormItem id="fiMainSignature" fiLabel="Main Signature" label="Main Signature">
+                <mx:ComboBox id="fMainSignature" width="160" labelField="label" change="fiMainSignature.hideError()" />
+            </components:ValidationFormItem>
+
+            <components:ValidationFormItem id="fiGroupId" fiLabel="Group" label="Group">
+                <mx:TextInput id="fGroupId" width="160" />
+            </components:ValidationFormItem>
+
+            <mx:Text textAlign="right" text="* Required" width="100%" />
+        </mx:Form>
+    </mx:VBox>
+
+    <mx:VBox id="buttons" bottom="10" right="15">
+		<mx:HRule width="100%" height="1"/>
+        <mx:HBox>
+            <mx:Button label="Continue" click="saveAndClose()"/>
+            <mx:Button label="Cancel" click="customPopUpManager.removePopUp(this)"/>
+        </mx:HBox>
+    </mx:VBox>
+
+</mx:TitleWindow>

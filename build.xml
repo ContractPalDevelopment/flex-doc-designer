@@ -1,0 +1,24 @@
+<project name="FlexDocEditor" default="compile flex project">
+ 
+   <!-- load previously defined configuration properties file -->
+   <property file="build.properties" />
+                              
+   <!-- points to our flexTasks.jar we copied to the libs folder to distribute with the project -->
+   <taskdef resource="flexTasks.tasks" classpath="${basedir}/libs/flexTasks.jar"/> 
+                              
+   <!-- delete and create the DEPLOY dir again -->
+   <target name="init">
+      <delete dir="${DEPLOY_DIR}" />
+      <mkdir dir="${DEPLOY_DIR}" />       
+   </target>
+                              
+   <!-- Build and output the Main.swf-->
+   <target name="compile flex project" depends="init">
+      <mxmlc file="${SRC_DIR}/FlexDocDesigner.mxml" output="${DEPLOY_DIR}/FlexDocDesigner.swf">
+         <load-config filename="${FLEX_HOME}/frameworks/flex-config.xml"/>
+         <source-path path-element="${FLEX_HOME}/frameworks"/>
+         <compiler.debug>false</compiler.debug>             
+      </mxmlc>
+   </target>
+ 
+</project>

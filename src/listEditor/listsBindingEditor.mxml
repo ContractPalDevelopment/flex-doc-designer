@@ -1,0 +1,226 @@
+<mx:TitleWindow xmlns:mx="http://www.adobe.com/2006/mxml" xmlns:custom="components.*"
+                layout="absolute" width="430" height="312"
+	    title="Add New List Binding"  showCloseButton="true" close="customPopUpManager.removePopUp(this)" creationComplete="init()">
+	<mx:Script>
+		<![CDATA[
+        import components.customPopUpManager;
+        import fieldSettingsDialogs.Validator;
+        import mx.collections.ArrayCollection;
+        import mx.core.FlexGlobals;
+
+        private var mainApp:FlexDocDesigner = FlexDocDesigner(FlexGlobals.topLevelApplication);
+        public var bindingsDialog:listsBindings;
+        public var binding:String;
+        public var listName:String;
+
+        private function init():void {
+            fList.dataProvider = getOptionsAC();
+            if (binding == null){
+                fCreate.visible = true;
+                fCreate.includeInLayout = true;
+            }
+            else {
+                fUpdate.visible = true;
+                fUpdate.includeInLayout = true;
+                this.title = "Edit List Binding";
+                fBindingName.enabled = false;
+
+                fBindingName.text = binding;
+                fLabel.text = listName;
+            }
+            manageButtons();
+        }
+
+        private function getOptionsAC():ArrayCollection {
+            var result:ArrayCollection = new ArrayCollection();
+            var listObj:Object = mainApp.docBindingObj[binding];
+            if (listObj == null) {
+                return result;
+            }
+
+            var recordCount:int = int(listObj["recordCount"]);
+            for(var i:int=0; i< recordCount; i++){
+                var row:Array = listObj["rows"][i];
+                result.addItem({label:row[1], value:row[0]});
+            }
+            return result;
+        }
+
+        private function manageButtons():void {
+            if (fList.selectedIndex == -1) {
+                fEditItem.enabled = false;
+                fDeleteItem.enabled = false;
+                fUp.enabled = false;
+                fDown.enabled = false;
+            }
+            else {
+                fEditItem.enabled = true;
+                fDeleteItem.enabled = true;
+                fUp.enabled = true;
+                fDown.enabled = true;
+                if (fList.selectedIndex == 0) {
+                    fUp.enabled = false;
+                }
+                if (fList.selectedIndex == ArrayCollection(fList.dataProvider).length - 1) {
+                    fDown.enabled = false;
+                }
+            }
+        }
+
+        public function addItem(pLabel:String, pValue:String):void {
+            var AC:ArrayCollection = ArrayCollection(fList.dataProvider);
+            AC.addItem({label:pLabel, value:pValue});
+            fList.dataProvider = AC;
+            fList.validateNow();
+        }
+
+        public function editItem(pLabel:String, pValue:String):void {
+            var AC:ArrayCollection = ArrayCollection(fList.dataProvider);
+            AC[fList.selectedIndex].label = pLabel;
+            AC[fList.selectedIndex].value = pValue;
+            fList.dataProvider = AC;
+            fList.validateNow();
+        }
+
+        private function fAddItemClick():void {
+            var addD:addListItem = addListItem(customPopUpManager.createPopUp(mainApp.docContainer, addListItem, true));
+            addD.listDialog = this;
+            customPopUpManager.centerPopUp(addD);
+        }
+
+        private function fCreateClick():void {
+            if (!Validate()) return;
+
+            for(var i:int=0; i<mainApp.selectBindingAC.length; i++){
+                if(mainApp.selectBindingAC[i].Binding == fBindingName.text){
+                    fiBindingName.showError("a list with this binding name already exists");
+                    return;
+                }
+            }
+
+            var AC:ArrayCollection = ArrayCollection(fList.dataProvider);
+            var result:Object = new Object();
+            result["columnCount"] = 2;
+            result["columnNames"] = "value,name";
+            result["recordCount"] = AC.length;
+            var rows:Array = new Array();
+            for (i = 0; i < AC.length; i++) {
+                var rec:Array = new Array();
+                rec.push(AC[i].value);
+                rec.push(AC[i].label);
+                rows.push(rec);
+            }
+            result["rows"] = rows;
+            mainApp.docBindingObj[fBindingName.text] = result;
+
+            mainApp.selectBindingAC.addItem({Label:fLabel.text, Binding:fBindingName.text, Type:"doc"});
+            bindingsDialog.fBindings.selectedIndex = mainApp.selectBindingAC.length - 1;
+            bindingsDialog.fBindingsChange();
+            customPopUpManager.removePopUp(this);
+        }
+
+        private function fUpdateClick():void {
+            if (!Validate()) return;
+
+            var AC:ArrayCollection = ArrayCollection(fList.dataProvider);
+            var result:Object = new Object();
+            result["columnCount"] = 2;
+            result["columnNames"] = "value,name";
+            result["recordCount"] = AC.length;
+            var rows:Array = new Array();
+            for (var i:int = 0; i < AC.length; i++) {
+                var rec:Array = new Array();
+                rec.push(AC[i].value);
+                rec.push(AC[i].label);
+                rows.push(rec);
+            }
+            result["rows"] = rows;
+            mainApp.docBindingObj[fBindingName.text] = result;
+
+            for(i = 0; i<mainApp.selectBindingAC.length; i++){
+                if(mainApp.selectBindingAC[i].Binding == binding)
+                {
+                    mainApp.selectBindingAC.removeItemAt(i);
+                    mainApp.selectBindingAC.addItemAt({Label:fLabel.text, Binding:binding, Type:"doc"}, i);
+                    bindingsDialog.fBindings.selectedIndex = i;
+                    bindingsDialog.fBindingsChange();
+                    break;
+                }
+            }
+            customPopUpManager.removePopUp(this);
+        }
+
+        private function fEditItemClick():void {
+            var editD:addListItem = addListItem(customPopUpManager.createPopUp(mainApp.docContainer, addListItem, true));
+            editD.listDialog = this;
+            editD.fLabel.text = fList.selectedItem.label;
+            editD.fValue.text = fList.selectedItem.value;
+            customPopUpManager.centerPopUp(editD);
+        }
+
+        private function fDeleteItemClick():void {
+            var AC:ArrayCollection = ArrayCollection(fList.dataProvider);
+            AC.removeItemAt(fList.selectedIndex);
+            fList.dataProvider = AC;
+            fList.validateNow();
+        }
+
+        private function fUpClick():void {
+            var pos:int = fList.selectedIndex;
+            var AC:ArrayCollection = ArrayCollection(fList.dataProvider);
+            var elem:Object = AC.removeItemAt(pos);
+            AC.addItemAt(elem, pos - 1);
+            fList.dataProvider = AC;
+            fList.validateNow();
+            fList.selectedIndex = pos - 1;
+            manageButtons();
+        }
+
+        private function fDownClick():void {
+            var pos:int = fList.selectedIndex;
+            var AC:ArrayCollection = ArrayCollection(fList.dataProvider);
+            var elem:Object = AC.removeItemAt(pos);
+            AC.addItemAt(elem, pos + 1);
+            fList.dataProvider = AC;
+            fList.validateNow();
+            fList.selectedIndex = pos + 1;
+            manageButtons();
+        }
+
+        private function Validate():Boolean {
+            return Validator.validateValidationFormItems(myForm.getChildren());
+        }
+        ]]>
+	</mx:Script>
+
+	<mx:VBox top="10" left="15" right="15" width="100%">
+        <mx:Form id="myForm" labelWidth="100">
+            <custom:ValidationFormItem id="fiBindingName" label="Binding Name" fiLabel="Binding Name" doValidation="true" isRequired="true"   >
+                <mx:TextInput id="fBindingName" width="160" />
+            </custom:ValidationFormItem>
+            <custom:ValidationFormItem id="fiLabel" label="Label" fiLabel="Label" doValidation="true" isRequired="true">
+                <mx:TextInput id="fLabel" width="160" />
+            </custom:ValidationFormItem>
+        </mx:Form>
+        <mx:HBox>
+            <mx:DataGrid id="fList" width="290" height="140" change="manageButtons()">
+                <mx:columns>
+                    <mx:DataGridColumn dataField="label" headerText="Label" />
+                    <mx:DataGridColumn dataField="value" headerText="value" />
+                </mx:columns>
+            </mx:DataGrid>
+            <mx:VBox width="100">
+                <mx:Button id="fAddItem" label="add item" width="100%" click="fAddItemClick()" />
+                <mx:Button id="fEditItem" label="edit item" width="100%" click="fEditItemClick()" />
+                <mx:Button id="fDeleteItem" label="delete item" width="100%" click="fDeleteItemClick()" />
+                <mx:Button id="fUp" label="up" width="100%" click="fUpClick()" />
+                <mx:Button id="fDown" label="down" width="100%" click="fDownClick()" />
+            </mx:VBox>
+        </mx:HBox>
+	</mx:VBox>
+    <mx:HBox bottom="10" right="15" textAlign="right">
+        <mx:Button id="fCreate" label="Create" width="100" click="fCreateClick()" visible="false" includeInLayout="false" />
+        <mx:Button id="fUpdate" label="Update" width="100" click="fUpdateClick()" visible="false" includeInLayout="false" />
+        <mx:Button id="fCancel" label="Cancel" width="100" click="customPopUpManager.removePopUp(this)" />
+    </mx:HBox>
+</mx:TitleWindow>

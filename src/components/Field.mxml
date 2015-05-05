@@ -1,0 +1,254 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Group xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		 xmlns:s="library://ns.adobe.com/flex/spark"
+         creationComplete="init()">
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+	</fx:Declarations>
+	<fx:Script>
+		<![CDATA[
+        import flash.filters.ColorMatrixFilter;
+        import helpers.FieldsManager;
+        import helpers.Layer;
+        import helpers.Messaging;
+        import mx.controls.Image;
+        import mx.core.FlexGlobals;
+        import mx.graphics.ImageSnapshot;
+
+        use namespace mx_internal;
+
+        protected var mainApp:FlexDocDesigner = FlexDocDesigner(FlexGlobals.topLevelApplication);
+        public var fieldData:Object = null;
+        protected var _inSelection:Boolean = false;
+        protected var _showWarning:Boolean = false;
+        protected var fieldId:String = "";
+        public var isNative:Boolean = false;
+
+
+        [Embed(source="../assets/warning.png")][Bindable] public var img_warning:Class;
+        [Embed(source="../assets/bg.png")][Bindable] public var bg_source:Class;
+        public function set inSelection(value:Boolean):void{ _inSelection = value; }
+        public function get inSelection():Boolean{ return _inSelection; }
+        public function set showWarning(value:Boolean):void{}
+        public function addContextMenu():void{}
+
+        protected function select():void{}
+        protected function unselect():void{}
+
+        private function init():void{
+            var scaledPoint:Point = Layer.scalePoint(new Point(int(fieldData["left"]), int(fieldData["top"])));
+            this.x = scaledPoint.x;
+            this.y = scaledPoint.y;
+        }
+
+        protected function getColorFilter():ColorMatrixFilter{
+            var matrix:Array = new Array();
+            matrix = matrix.concat([1,0,0,0,0]);    // red
+            matrix = matrix.concat([0,1,0,0,0]);    // green
+            matrix = matrix.concat([0,0,0.7,0,0]);  // blue
+            matrix = matrix.concat([0,0,0,1,0]);    // alpha
+            return new ColorMatrixFilter(matrix);
+        }
+
+        public function adjustDialogPosition(dialog:DisplayObject, elemY:int=0):void
+        {
+            if(elemY == 0) { elemY = this.y; }
+            dialog.y = elemY + 100 - Math.ceil(dialog.height/2) + mainApp.thumbnails.height;
+            Messaging.log(this.y.toString() + " " + dialog.height.toString() + " " + mainApp.thumbnails.height.toString());
+            if(dialog.y + dialog.height > mainApp.height) { dialog.y = mainApp.height - dialog.height; }
+            if(dialog.y < 0) { dialog.y = 0; }
+        }
+
+        protected var shadow:Image;
+        protected function fieldStartDrag(e:MouseEvent):void{
+            var shiftKey:Boolean = e.shiftKey;
+            var wasSelected:Boolean = this.inSelection;
+            var curField:Field = this;
+            this.inSelection = true;
+            this.unselect();
+            var bitmap:BitmapData = ImageSnapshot.captureBitmapData(this);
+            this.select();
+            shadow = new Image();
+            shadow.source = new Bitmap(bitmap);
+            shadow.x = this.x;
+            shadow.y = this.y;
+            shadow.alpha = 0.5;
+            mainApp.panel.addChildAt(shadow, 1);
+            if(!wasSelected && !shiftKey){
+                FieldsManager.unSelectAll();
+                curField.inSelection = true;
+            }
+            var rectangle:Rectangle = FieldsManager.getDragRectangle(new Rectangle(this.x, this.y, this.width, this.height));
+            shadow.startDrag(false, rectangle);
+            shadow.addEventListener(MouseEvent.MOUSE_UP, function(e:MouseEvent):void{
+                shadow.stopDrag();
+                mainApp.removeEventListener(MouseEvent.MOUSE_UP, globalMouseUp);
+                var newX:int = shadow.mx_internal::$x;
+                var newY:int = shadow.mx_internal::$y;
+                var scaledPos:Point = Layer.scalePoint(new Point(int(fieldData["left"]), int(fieldData["top"])));
+                var dispX:int = newX - scaledPos.x;
+                var dispY:int = newY - scaledPos.y;
+                mainApp.panel.removeChild(shadow);
+                if(dispX != 0 || dispY != 0){
+                    FieldsManager.moveSelected(dispX, dispY);
+                    Layer.drawLayer();
+                }
+                else if(!shiftKey){
+                    FieldsManager.unSelectAll(curField);
+                }
+                else{
+                    if(wasSelected){
+                        curField.inSelection = false;
+                    }
+                    if(FieldsManager.getSelectedFields().length>1){
+                        FieldsManager.setGroupContextMenu();
+                    }
+                }
+            });
+            mainApp.addEventListener(MouseEvent.MOUSE_UP, globalMouseUp);
+        }
+
+        protected function launchSettingsDialog():void{}
+
+        protected function contextMenuSelectHandler(event:ContextMenuEvent):void{
+            var ctxField:Field = Field(event.contextMenuOwner);
+            if(!ctxField.inSelection)
+            {
+                FieldsManager.unSelectAll(ctxField);
+            }
+        }
+
+        protected function globalMouseUp(e:MouseEvent):void{
+            shadow.dispatchEvent(e);
+        }
+
+        protected function log(msg:String):void{
+            Messaging.log(msg);
+        }
+
+        protected function resizeField(e:Event):void{
+            if(isNative) { return; }
+            var resizeBox:ResizeBox = ResizeBox(e.currentTarget);
+            var newH:int;
+            var newW:int;
+            var newLeft:int;
+            var newTop:int;
+            switch(resizeBox.name.toString()){
+                case "cl":
+                    newLeft = int(fieldData["left"])+resizeBox.hDisp;
+                    newW = int(fieldData["width"])-resizeBox.hDisp;
+                    if(newW<0){
+                        newW = -newW;
+                        newLeft = newLeft - newW;
+                    }
+                    fieldData["width"] = newW;
+                    fieldData["left"] = newLeft;
+                    break;
+                case "cr":
+                    newLeft = int(fieldData["left"]);
+                    newW = int(fieldData["width"])+resizeBox.hDisp;
+                    if(newW<0){
+                        newW = -newW;
+                        newLeft = newLeft - newW;
+                    }
+                    fieldData["width"] = newW;
+                    fieldData["left"] = newLeft;
+                    break;
+                case "tc":
+                    newTop = int(fieldData["top"])+resizeBox.vDisp;
+                    newH = int(fieldData["height"])-resizeBox.vDisp;
+                    if(newH<0){
+                        newH = -newH;
+                        newTop = newTop - newH;
+                    }
+                    fieldData["height"] = newH;
+                    fieldData["top"] = newTop;
+                    break;
+                case "bc":
+                    newTop = int(fieldData["top"]);
+                    newH = int(fieldData["height"])+resizeBox.vDisp;
+                    if(newH<0){
+                        newH = -newH;
+                        newTop = newTop - newH;
+                    }
+                    fieldData["height"] = newH;
+                    fieldData["top"] = newTop;
+                    break;
+                case "tl":
+                    newTop = int(fieldData["top"])+resizeBox.vDisp;
+                    newH = int(fieldData["height"])-resizeBox.vDisp;
+                    if(newH<0){
+                        newH = -newH;
+                        newTop = newTop - newH;
+                    }
+                    fieldData["height"] = newH;
+                    fieldData["top"] = newTop;
+                    newLeft = int(fieldData["left"])+resizeBox.hDisp;
+                    newW = int(fieldData["width"])-resizeBox.hDisp;
+                    if(newW<0){
+                        newW = -newW;
+                        newLeft = newLeft - newW;
+                    }
+                    fieldData["width"] = newW;
+                    fieldData["left"] = newLeft;
+                    break;
+                case "tr":
+                    newTop = int(fieldData["top"])+resizeBox.vDisp;
+                    newH = int(fieldData["height"])-resizeBox.vDisp;
+                    if(newH<0){
+                        newH = -newH;
+                        newTop = newTop - newH;
+                    }
+                    fieldData["height"] = newH;
+                    fieldData["top"] = newTop;
+                    newLeft = int(fieldData["left"]);
+                    newW = int(fieldData["width"])+resizeBox.hDisp;
+                    if(newW<0){
+                        newW = -newW;
+                        newLeft = newLeft - newW;
+                    }
+                    fieldData["width"] = newW;
+                    fieldData["left"] = newLeft;
+                    break;
+                case "bl":
+                    newTop = int(fieldData["top"]);
+                    newH = int(fieldData["height"])+resizeBox.vDisp;
+                    if(newH<0){
+                        newH = -newH;
+                        newTop = newTop - newH;
+                    }
+                    fieldData["height"] = newH;
+                    fieldData["top"] = newTop;
+                    newLeft = int(fieldData["left"])+resizeBox.hDisp;
+                    newW = int(fieldData["width"])-resizeBox.hDisp;
+                    if(newW<0){
+                        newW = -newW;
+                        newLeft = newLeft - newW;
+                    }
+                    fieldData["width"] = newW;
+                    fieldData["left"] = newLeft;
+                    break;
+                case "br":
+                    newTop = int(fieldData["top"]);
+                    newH = int(fieldData["height"])+resizeBox.vDisp;
+                    if(newH<0){
+                        newH = -newH;
+                        newTop = newTop - newH;
+                    }
+                    fieldData["height"] = newH;
+                    fieldData["top"] = newTop;
+                    newLeft = int(fieldData["left"]);
+                    newW = int(fieldData["width"])+resizeBox.hDisp;
+                    if(newW<0){
+                        newW = -newW;
+                        newLeft = newLeft - newW;
+                    }
+                    fieldData["width"] = newW;
+                    fieldData["left"] = newLeft;
+                    break;
+            }
+            Layer.drawLayer();
+        }
+		]]>
+	</fx:Script>
+</s:Group>
